@@ -41,7 +41,7 @@
                     <div class="mb-3">
                         <label for="account-name" class="form-label">Account</label>
                         <input type="text" class="form-control" id="account-name" name="account_name"
-                               list="account-list" placeholder="e.g., AMEX, Checking, Savings1">
+                               list="account-list" placeholder="e.g., AMEX, EECU Checking, Target Card">
                         <datalist id="account-list">
                             <!-- Populated by JavaScript -->
                         </datalist>
@@ -147,8 +147,8 @@
             document.getElementById('date').value = txn.date;
             document.getElementById('description').value = txn.description;
             document.getElementById('amount').value = txn.amount;
-            document.getElementById('account-name').value = txn.account_name || '';
             document.getElementById('merchant').value = txn.merchant || '';
+            document.getElementById('account-name').value = txn.account_name || '';
             document.getElementById('category').value = txn.category_id || '';
             document.getElementById('notes').value = txn.notes || '';
         } catch (error) {
@@ -162,8 +162,8 @@
             date: document.getElementById('date').value,
             description: document.getElementById('description').value,
             amount: parseFloat(document.getElementById('amount').value),
-            account_name: document.getElementById('account-name').value || null,
             merchant: document.getElementById('merchant').value || null,
+            account_name: document.getElementById('account-name').value || null,
             category_id: document.getElementById('category').value ? 
                         parseInt(document.getElementById('category').value) : null,
             notes: document.getElementById('notes').value || null

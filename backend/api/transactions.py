@@ -7,6 +7,17 @@ from backend.categorizer import categorize_transaction
 transactions_bp = Blueprint('transactions', __name__)
 
 
+@transactions_bp.route('/accounts', methods=['GET'])
+def list_accounts():
+    """Get list of unique account names."""
+    accounts = db.session.query(Transaction.account_name).filter(
+        Transaction.account_name.isnot(None),
+        Transaction.account_name != ''
+    ).distinct().order_by(Transaction.account_name).all()
+    
+    return jsonify([a[0] for a in accounts if a[0]]), 200
+
+
 @transactions_bp.route('', methods=['GET'])
 def list_transactions():
     """List all transactions with optional filtering.
@@ -18,7 +29,7 @@ def list_transactions():
     - account_name: Filter by account name
     - min_amount: Filter by minimum amount
     - max_amount: Filter by maximum amount
-    - search: Search in description
+    - search: Search in description and merchant
     - page: Page number (default: 1)
     - per_page: Items per page (default: 50)
     """
@@ -68,10 +79,14 @@ def list_transactions():
         except ValueError:
             return jsonify({'error': 'Invalid max_amount'}), 400
     
-    # Search filter
+    # Search filter - search in both description and merchant
     search = request.args.get('search')
     if search:
-        query = query.filter(Transaction.description.ilike(f'%{search}%'))
+        search_filter = f'%{search}%'
+        query = query.filter(
+            (Transaction.description.ilike(search_filter)) |
+            (Transaction.merchant.ilike(search_filter))
+        )
     
     # Pagination
     page = request.args.get('page', 1, type=int)
@@ -101,19 +116,7 @@ def get_transaction(transaction_id):
 
 @transactions_bp.route('', methods=['POST'])
 def create_transaction():
-    """Create a new transaction.
-    
-    Request body:
-    {
-        "date": "YYYY-MM-DD",
-        "amount": float,
-        "description": "string",
-        "merchant": "string" (optional),
-        "account_name": "string" (optional),
-        "category_id": int (optional),
-        "notes": "string" (optional)
-    }
-    """
+    """Create a new transaction."""
     data = request.get_json()
     
     if not data:
@@ -139,10 +142,10 @@ def create_transaction():
     except (ValueError, TypeError):
         return jsonify({'error': 'Invalid amount'}), 400
     
-    # Auto-categorize if no category provided
+    # Auto-categorize if no category provided - prioritize merchant
     category_id = data.get('category_id')
     if not category_id:
-        category_id = categorize_transaction(data['description'], data.get('merchant'))
+        category_id = categorize_transaction(data.get('merchant'), data['description'])
     
     transaction = Transaction(
         date=date,
@@ -162,19 +165,7 @@ def create_transaction():
 
 @transactions_bp.route('/<int:transaction_id>', methods=['PUT'])
 def update_transaction(transaction_id):
-    """Update an existing transaction.
-    
-    Request body (all fields optional):
-    {
-        "date": "YYYY-MM-DD",
-        "amount": float,
-        "description": "string",
-        "merchant": "string",
-        "account_name": "string",
-        "category_id": int,
-        "notes": "string"
-    }
-    """
+    """Update an existing transaction."""
     transaction = Transaction.query.get_or_404(transaction_id)
     data = request.get_json()
     
@@ -225,20 +216,7 @@ def delete_transaction(transaction_id):
 
 @transactions_bp.route('/bulk', methods=['POST'])
 def bulk_create_transactions():
-    """Create multiple transactions at once.
-    
-    Request body:
-    {
-        "transactions": [
-            {
-                "date": "YYYY-MM-DD",
-                "amount": float,
-                "description": "string",
-                ...
-            }
-        ]
-    }
-    """
+    """Create multiple transactions at once."""
     data = request.get_json()
     
     if not data or 'transactions' not in data:
@@ -257,10 +235,10 @@ def bulk_create_transactions():
             date = datetime.strptime(txn_data['date'], '%Y-%m-%d').date()
             amount = float(txn_data['amount'])
             
-            # Auto-categorize if no category provided
+            # Auto-categorize if no category provided - prioritize merchant
             category_id = txn_data.get('category_id')
             if not category_id:
-                category_id = categorize_transaction(txn_data['description'], txn_data.get('merchant'))
+                category_id = categorize_transaction(txn_data.get('merchant'), txn_data.get('description'))
             
             transaction = Transaction(
                 date=date,
@@ -285,13 +263,3 @@ def bulk_create_transactions():
         'errors': errors,
         'error_count': len(errors)
     }), 201 if created else 400
-
-
-@transactions_bp.route('/accounts', methods=['GET'])
-def list_accounts():
-    """Get list of unique account names."""
-    accounts = db.session.query(Transaction.account_name).filter(
-        Transaction.account_name.isnot(None)
-    ).distinct().order_by(Transaction.account_name).all()
-    
-    return jsonify([a[0] for a in accounts if a[0]]), 200

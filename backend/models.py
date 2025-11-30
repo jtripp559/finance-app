@@ -61,7 +61,7 @@ class Transaction(db.Model):
     amount = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(500), nullable=False)
     merchant = db.Column(db.String(200), nullable=True)
-    account_name = db.Column(db.String(100), nullable=True)
+    account_name = db.Column(db.String(100), nullable=True)  # e.g., "AMEX", "EECU Checking", "Target Card"
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     notes = db.Column(db.Text, nullable=True)

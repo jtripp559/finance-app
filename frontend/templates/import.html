@@ -57,15 +57,21 @@
                         <select class="form-select" id="description-column" required></select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Account Column</label>
-                        <select class="form-select" id="account-column">
+                        <label class="form-label">Merchant Column</label>
+                        <select class="form-select" id="merchant-column">
                             <option value="">None</option>
                         </select>
                     </div>
                 </div>
                 
                 <div class="row g-3 mb-4">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label class="form-label">Account Column</label>
+                        <select class="form-select" id="account-column">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label">Date Format</label>
                         <select class="form-select" id="date-format">
                             <option value="">Auto-detect</option>
@@ -205,9 +211,11 @@
         const dateSelect = document.getElementById('date-column');
         const amountSelect = document.getElementById('amount-column');
         const descSelect = document.getElementById('description-column');
+        const merchantSelect = document.getElementById('merchant-column');
         const accountSelect = document.getElementById('account-column');
         
-        [dateSelect, amountSelect, descSelect, accountSelect].forEach(select => {
+        // Clear and populate required selects
+        [dateSelect, amountSelect, descSelect].forEach(select => {
             select.innerHTML = '<option value="">Select column...</option>';
             data.headers.forEach(header => {
                 const option = document.createElement('option');
@@ -215,6 +223,23 @@
                 option.textContent = header;
                 
                 // Indicate suggested type
+                const suggestedType = data.column_suggestions[header];
+                if (suggestedType && suggestedType !== 'unknown') {
+                    option.textContent += ` (${suggestedType})`;
+                }
+                
+                select.appendChild(option);
+            });
+        });
+        
+        // Populate optional selects with "None" option
+        [merchantSelect, accountSelect].forEach(select => {
+            select.innerHTML = '<option value="">None</option>';
+            data.headers.forEach(header => {
+                const option = document.createElement('option');
+                option.value = header;
+                option.textContent = header;
+                
                 const suggestedType = data.column_suggestions[header];
                 if (suggestedType && suggestedType !== 'unknown') {
                     option.textContent += ` (${suggestedType})`;
@@ -234,6 +259,12 @@
             }
             if (data.suggested_mapping.description) {
                 descSelect.value = data.suggested_mapping.description;
+            }
+            if (data.suggested_mapping.merchant) {
+                merchantSelect.value = data.suggested_mapping.merchant;
+            }
+            if (data.suggested_mapping.account) {
+                accountSelect.value = data.suggested_mapping.account;
             }
         }
         
@@ -273,6 +304,7 @@
         const dateColumn = document.getElementById('date-column').value;
         const amountColumn = document.getElementById('amount-column').value;
         const descColumn = document.getElementById('description-column').value;
+        const merchantColumn = document.getElementById('merchant-column').value;
         const accountColumn = document.getElementById('account-column').value;
         const dateFormat = document.getElementById('date-format').value;
         
@@ -287,10 +319,13 @@
             description: descColumn
         };
         
+        // Add optional columns
+        if (merchantColumn) {
+            mapping.merchant = merchantColumn;
+        }
         if (accountColumn) {
             mapping.account = accountColumn;
         }
-        
         if (dateFormat) {
             mapping.date_format = dateFormat;
         }

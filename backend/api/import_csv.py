@@ -24,8 +24,13 @@ def detect_column_type(column_name, sample_values):
     if any(kw in name_lower for kw in amount_keywords):
         return 'amount'
     
+    # Merchant detection - check before description
+    merchant_keywords = ['merchant', 'vendor', 'payee', 'store', 'retailer']
+    if any(kw in name_lower for kw in merchant_keywords):
+        return 'merchant'
+    
     # Description detection
-    desc_keywords = ['description', 'desc', 'memo', 'narrative', 'details', 'merchant', 'payee', 'name']
+    desc_keywords = ['description', 'desc', 'memo', 'narrative', 'details', 'name', 'transaction']
     if any(kw in name_lower for kw in desc_keywords):
         return 'description'
     
@@ -143,6 +148,8 @@ def import_csv():
         "date": "Date Column Name",
         "amount": "Amount Column Name",
         "description": "Description Column Name",
+        "merchant": "Merchant Column Name" (optional),
+        "account": "Account Column Name" (optional),
         "date_format": "%Y-%m-%d" (optional)
       }
     """
@@ -208,14 +215,24 @@ def import_csv():
                         errors.append({'row': i + 1, 'error': 'Empty description'})
                         continue
                     
-                    # Auto-categorize
-                    category_id = categorize_transaction(description)
+                    # Get optional fields
+                    merchant = None
+                    if mapping.get('merchant') and mapping['merchant'] in headers:
+                        merchant = row.get(mapping['merchant'], '').strip() or None
+                    
+                    account_name = None
+                    if mapping.get('account') and mapping['account'] in headers:
+                        account_name = row.get(mapping['account'], '').strip() or None
+                    
+                    # Auto-categorize - prioritize merchant
+                    category_id = categorize_transaction(merchant, description)
                     
                     transaction = Transaction(
                         date=date_val,
                         amount=amount,
                         description=description,
-                        account_name=row.get(mapping.get('account', ''), '').strip() if mapping.get('account') else None,
+                        merchant=merchant,
+                        account_name=account_name,
                         category_id=category_id
                     )
                     db.session.add(transaction)
@@ -270,9 +287,5 @@ def import_csv():
                 ]
             }), 200
     
-    except UnicodeDecodeError:
-        return jsonify({'error': 'Could not decode file. Please ensure it is UTF-8 encoded.'}), 400
     except Exception as e:
-        # Log the full error for debugging but return generic message to client
-        current_app.logger.error(f'CSV import error: {str(e)}')
-        return jsonify({'error': 'An error occurred while processing the file. Please check the file format and try again.'}), 500
+        return jsonify({'error': str(e)}), 500
