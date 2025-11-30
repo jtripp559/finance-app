@@ -1,0 +1,205 @@
+/* Personal Finance App - Custom Styles */
+
+/* General Layout */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Navbar */
+.navbar-brand {
+    font-weight: bold;
+}
+
+/* Cards */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: none;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+/* Summary Cards */
+.card.bg-success,
+.card.bg-danger,
+.card.bg-info,
+.card.bg-primary,
+.card.bg-secondary {
+    border: none;
+}
+
+.card.bg-success .card-title,
+.card.bg-danger .card-title,
+.card.bg-info .card-title,
+.card.bg-primary .card-title,
+.card.bg-secondary .card-title {
+    margin-bottom: 0;
+}
+
+/* Tables */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    font-weight: 600;
+    color: #495057;
+    border-top: none;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Transactions */
+.text-success {
+    color: #28a745 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+/* Progress Bars */
+.progress {
+    background-color: #e9ecef;
+    border-radius: 0.375rem;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* Forms */
+.form-control:focus,
+.form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Buttons */
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+/* Categories */
+.category-item {
+    transition: background-color 0.15s ease-in-out;
+}
+
+.category-row:hover {
+    background-color: #f8f9fa;
+}
+
+/* Charts */
+canvas {
+    max-height: 350px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .btn-group .btn {
+        padding: 0.375rem 0.5rem;
+    }
+    
+    canvas {
+        max-height: 250px;
+    }
+}
+
+@media (max-width: 576px) {
+    .row.mb-4 > .col-md-3,
+    .row.mb-4 > .col-md-4,
+    .row.mb-4 > .col-md-6 {
+        margin-bottom: 1rem !important;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    .card-title {
+        font-size: 1.25rem;
+    }
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Footer */
+.footer {
+    margin-top: auto;
+}
+
+/* Badge improvements */
+.badge {
+    font-weight: 500;
+}
+
+/* Alert improvements */
+.alert {
+    border: none;
+    border-radius: 0.375rem;
+}
+
+/* Modal improvements */
+.modal-header {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-footer {
+    border-top: 1px solid #e9ecef;
+}
+
+/* Pagination */
+.pagination {
+    margin-bottom: 0;
+}
+
+/* File upload */
+.form-control[type="file"] {
+    padding: 0.5rem;
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .btn,
+    .btn-group,
+    footer {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+    }
+}

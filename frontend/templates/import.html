@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}Import CSV - Personal Finance App{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1><i class="bi bi-upload"></i> Import Transactions from CSV</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-10 col-lg-8">
+        <!-- Step 1: Upload -->
+        <div class="card mb-4" id="upload-section">
+            <div class="card-header">
+                <h5><span class="badge bg-primary me-2">1</span> Upload CSV File</h5>
+            </div>
+            <div class="card-body">
+                <form id="upload-form">
+                    <div class="mb-3">
+                        <label for="csv-file" class="form-label">Select a CSV file to import</label>
+                        <input type="file" class="form-control" id="csv-file" accept=".csv" required>
+                        <div class="form-text">
+                            Supported formats: CSV files exported from banks, credit cards, or other finance apps.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="upload-btn">
+                        <i class="bi bi-cloud-upload"></i> Upload & Preview
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Step 2: Map Columns (hidden initially) -->
+        <div class="card mb-4 d-none" id="mapping-section">
+            <div class="card-header">
+                <h5><span class="badge bg-primary me-2">2</span> Map Columns</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    We detected <strong id="total-rows">0</strong> rows in your file. 
+                    Please verify the column mappings below.
+                </p>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label">Date Column <span class="text-danger">*</span></label>
+                        <select class="form-select" id="date-column" required></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Amount Column <span class="text-danger">*</span></label>
+                        <select class="form-select" id="amount-column" required></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Description Column <span class="text-danger">*</span></label>
+                        <select class="form-select" id="description-column" required></select>
+                    </div>
+                </div>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label">Date Format</label>
+                        <select class="form-select" id="date-format">
+                            <option value="">Auto-detect</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <h6>Preview Data</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm table-bordered" id="preview-table">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" id="import-btn">
+                        <i class="bi bi-download"></i> Import Transactions
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="reset-btn">
+                        <i class="bi bi-arrow-counterclockwise"></i> Start Over
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Results (hidden initially) -->
+        <div class="card d-none" id="results-section">
+            <div class="card-header">
+                <h5><span class="badge bg-success me-2">3</span> Import Results</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success" id="success-alert">
+                    <i class="bi bi-check-circle"></i>
+                    <strong>Import Complete!</strong>
+                    <span id="import-summary"></span>
+                </div>
+                
+                <div class="alert alert-warning d-none" id="error-alert">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Some rows had errors:</strong>
+                    <ul id="error-list" class="mb-0 mt-2"></ul>
+                </div>
+                
+                <div class="d-flex gap-2 mt-3">
+                    <a href="/transactions" class="btn btn-primary">
+                        <i class="bi bi-list-ul"></i> View Transactions
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary" id="import-more-btn">
+                        <i class="bi bi-upload"></i> Import Another File
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Help sidebar -->
+    <div class="col-md-2 col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="bi bi-info-circle"></i> Tips</h6>
+            </div>
+            <div class="card-body">
+                <ul class="small mb-0">
+                    <li>Export transactions from your bank as CSV</li>
+                    <li>The file should have headers in the first row</li>
+                    <li>We'll auto-detect date, amount, and description columns</li>
+                    <li>Negative amounts are treated as expenses</li>
+                    <li>Transactions will be auto-categorized based on description</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let previewData = null;
+    let currentFile = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('upload-form').addEventListener('submit', handleUpload);
+        document.getElementById('import-btn').addEventListener('click', handleImport);
+        document.getElementById('reset-btn').addEventListener('click', resetForm);
+        document.getElementById('import-more-btn').addEventListener('click', resetForm);
+    });
+
+    async function handleUpload(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('csv-file');
+        if (!fileInput.files.length) {
+            alert('Please select a file');
+            return;
+        }
+        
+        currentFile = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('file', currentFile);
+        
+        const uploadBtn = document.getElementById('upload-btn');
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+        
+        try {
+            const response = await fetch('/api/import-csv', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Upload failed');
+            }
+            
+            previewData = data;
+            showMappingSection(data);
+            
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('Error: ' + error.message);
+        } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Upload & Preview';
+        }
+    }
+
+    function showMappingSection(data) {
+        document.getElementById('upload-section').classList.add('d-none');
+        document.getElementById('mapping-section').classList.remove('d-none');
+        
+        document.getElementById('total-rows').textContent = data.total_rows;
+        
+        // Populate column selects
+        const dateSelect = document.getElementById('date-column');
+        const amountSelect = document.getElementById('amount-column');
+        const descSelect = document.getElementById('description-column');
+        
+        [dateSelect, amountSelect, descSelect].forEach(select => {
+            select.innerHTML = '<option value="">Select column...</option>';
+            data.headers.forEach(header => {
+                const option = document.createElement('option');
+                option.value = header;
+                option.textContent = header;
+                
+                // Indicate suggested type
+                const suggestedType = data.column_suggestions[header];
+                if (suggestedType && suggestedType !== 'unknown') {
+                    option.textContent += ` (${suggestedType})`;
+                }
+                
+                select.appendChild(option);
+            });
+        });
+        
+        // Apply suggested mapping
+        if (data.suggested_mapping) {
+            if (data.suggested_mapping.date) {
+                dateSelect.value = data.suggested_mapping.date;
+            }
+            if (data.suggested_mapping.amount) {
+                amountSelect.value = data.suggested_mapping.amount;
+            }
+            if (data.suggested_mapping.description) {
+                descSelect.value = data.suggested_mapping.description;
+            }
+        }
+        
+        // Populate date formats
+        const dateFormatSelect = document.getElementById('date-format');
+        dateFormatSelect.innerHTML = '<option value="">Auto-detect</option>';
+        data.date_formats.forEach(fmt => {
+            const option = document.createElement('option');
+            option.value = fmt.value;
+            option.textContent = fmt.label;
+            dateFormatSelect.appendChild(option);
+        });
+        
+        // Render preview table
+        renderPreviewTable(data.headers, data.sample_data);
+    }
+
+    function renderPreviewTable(headers, rows) {
+        const thead = document.querySelector('#preview-table thead');
+        const tbody = document.querySelector('#preview-table tbody');
+        
+        thead.innerHTML = '<tr>' + headers.map(h => `<th>${escapeHtml(h)}</th>`).join('') + '</tr>';
+        tbody.innerHTML = '';
+        
+        rows.slice(0, 5).forEach(row => {
+            const tr = document.createElement('tr');
+            headers.forEach(header => {
+                const td = document.createElement('td');
+                td.textContent = row[header] || '';
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function handleImport() {
+        const dateColumn = document.getElementById('date-column').value;
+        const amountColumn = document.getElementById('amount-column').value;
+        const descColumn = document.getElementById('description-column').value;
+        const dateFormat = document.getElementById('date-format').value;
+        
+        if (!dateColumn || !amountColumn || !descColumn) {
+            alert('Please select all required columns');
+            return;
+        }
+        
+        const mapping = {
+            date: dateColumn,
+            amount: amountColumn,
+            description: descColumn
+        };
+        
+        if (dateFormat) {
+            mapping.date_format = dateFormat;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', currentFile);
+        formData.append('mapping', JSON.stringify(mapping));
+        
+        const importBtn = document.getElementById('import-btn');
+        importBtn.disabled = true;
+        importBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Importing...';
+        
+        try {
+            const response = await fetch('/api/import-csv', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok && !data.imported_count) {
+                throw new Error(data.error || 'Import failed');
+            }
+            
+            showResults(data);
+            
+        } catch (error) {
+            console.error('Import error:', error);
+            alert('Error: ' + error.message);
+            importBtn.disabled = false;
+            importBtn.innerHTML = '<i class="bi bi-download"></i> Import Transactions';
+        }
+    }
+
+    function showResults(data) {
+        document.getElementById('mapping-section').classList.add('d-none');
+        document.getElementById('results-section').classList.remove('d-none');
+        
+        document.getElementById('import-summary').textContent = 
+            ` Successfully imported ${data.imported_count} transactions.`;
+        
+        if (data.error_count > 0 && data.errors.length > 0) {
+            document.getElementById('error-alert').classList.remove('d-none');
+            const errorList = document.getElementById('error-list');
+            errorList.innerHTML = '';
+            data.errors.forEach(err => {
+                const li = document.createElement('li');
+                li.textContent = `Row ${err.row}: ${err.error}`;
+                errorList.appendChild(li);
+            });
+            if (data.error_count > data.errors.length) {
+                const li = document.createElement('li');
+                li.textContent = `... and ${data.error_count - data.errors.length} more errors`;
+                errorList.appendChild(li);
+            }
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('upload-section').classList.remove('d-none');
+        document.getElementById('mapping-section').classList.add('d-none');
+        document.getElementById('results-section').classList.add('d-none');
+        document.getElementById('error-alert').classList.add('d-none');
+        document.getElementById('upload-form').reset();
+        previewData = null;
+        currentFile = null;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Personal Finance App{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h1><i class="bi bi-graph-up"></i> Reports</h1>
+    </div>
+    <div class="col-md-6">
+        <div class="row g-2">
+            <div class="col-auto">
+                <input type="date" class="form-control" id="start-date">
+            </div>
+            <div class="col-auto">
+                <span class="form-control-plaintext">to</span>
+            </div>
+            <div class="col-auto">
+                <input type="date" class="form-control" id="end-date">
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" id="apply-dates">Apply</button>
+            </div>
+            <div class="col-auto">
+                <div class="btn-group">
+                    <button class="btn btn-outline-secondary" onclick="setDateRange(7)">7D</button>
+                    <button class="btn btn-outline-secondary" onclick="setDateRange(30)">30D</button>
+                    <button class="btn btn-outline-secondary" onclick="setDateRange(90)">90D</button>
+                    <button class="btn btn-outline-secondary" onclick="setDateRange(365)">1Y</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2">Total Income</h6>
+                <h3 class="card-title" id="total-income">$0.00</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2">Total Expenses</h6>
+                <h3 class="card-title" id="total-expenses">$0.00</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2">Net</h6>
+                <h3 class="card-title" id="net-amount">$0.00</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-secondary text-white">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2">Avg Transaction</h6>
+                <h3 class="card-title" id="avg-transaction">$0.00</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 1: Pie/Donut Charts -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-pie-chart"></i> Spending by Category (Pie)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="spending-pie-chart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-pie-chart-fill"></i> Spending by Category (Donut)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="spending-donut-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2: Line and Bar Charts -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-graph-up"></i> Spending Over Time (Line)</h5>
+                <select class="form-select form-select-sm w-auto" id="line-group-by">
+                    <option value="day">Daily</option>
+                    <option value="week" selected>Weekly</option>
+                    <option value="month">Monthly</option>
+                </select>
+            </div>
+            <div class="card-body">
+                <canvas id="spending-line-chart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-bar-chart"></i> Income vs Expenses (Bar)</h5>
+                <select class="form-select form-select-sm w-auto" id="bar-group-by">
+                    <option value="week">Weekly</option>
+                    <option value="month" selected>Monthly</option>
+                    <option value="year">Yearly</option>
+                </select>
+            </div>
+            <div class="card-body">
+                <canvas id="income-expense-bar-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 3: Stacked Area and Histogram -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-layers"></i> Category Trend (Stacked Area)</h5>
+                <select class="form-select form-select-sm w-auto" id="area-group-by">
+                    <option value="day">Daily</option>
+                    <option value="week" selected>Weekly</option>
+                    <option value="month">Monthly</option>
+                </select>
+            </div>
+            <div class="card-body">
+                <canvas id="category-stacked-chart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-bar-chart-steps"></i> Transaction Size Distribution (Histogram)</h5>
+                <select class="form-select form-select-sm w-auto" id="histogram-type">
+                    <option value="expense" selected>Expenses</option>
+                    <option value="income">Income</option>
+                </select>
+            </div>
+            <div class="card-body">
+                <canvas id="histogram-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let startDate, endDate;
+    let charts = {};
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Default to last 30 days
+        setDateRange(30);
+        
+        document.getElementById('apply-dates').addEventListener('click', loadAllReports);
+        
+        // Chart refresh on grouping change
+        document.getElementById('line-group-by').addEventListener('change', loadSpendingLineChart);
+        document.getElementById('bar-group-by').addEventListener('change', loadIncomeExpenseBarChart);
+        document.getElementById('area-group-by').addEventListener('change', loadCategoryStackedChart);
+        document.getElementById('histogram-type').addEventListener('change', loadHistogramChart);
+    });
+
+    function setDateRange(days) {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - days);
+        
+        document.getElementById('start-date').value = start.toISOString().split('T')[0];
+        document.getElementById('end-date').value = end.toISOString().split('T')[0];
+        
+        loadAllReports();
+    }
+
+    function getDateParams() {
+        startDate = document.getElementById('start-date').value;
+        endDate = document.getElementById('end-date').value;
+        return `start=${startDate}&end=${endDate}`;
+    }
+
+    async function loadAllReports() {
+        getDateParams();
+        
+        await Promise.all([
+            loadSummary(),
+            loadSpendingPieChart(),
+            loadSpendingDonutChart(),
+            loadSpendingLineChart(),
+            loadIncomeExpenseBarChart(),
+            loadCategoryStackedChart(),
+            loadHistogramChart()
+        ]);
+    }
+
+    async function loadSummary() {
+        try {
+            const response = await fetch(`/api/reports/summary?${getDateParams()}`);
+            const data = await response.json();
+            
+            document.getElementById('total-income').textContent = formatCurrency(data.total_income);
+            document.getElementById('total-expenses').textContent = formatCurrency(data.total_expense);
+            document.getElementById('net-amount').textContent = formatCurrency(data.net);
+            document.getElementById('avg-transaction').textContent = formatCurrency(data.average_transaction);
+        } catch (error) {
+            console.error('Error loading summary:', error);
+        }
+    }
+
+    async function loadSpendingPieChart() {
+        try {
+            const response = await fetch(`/api/reports/spending-by-category?${getDateParams()}`);
+            const data = await response.json();
+            
+            if (charts.pie) charts.pie.destroy();
+            
+            const ctx = document.getElementById('spending-pie-chart').getContext('2d');
+            charts.pie = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: data.data.map(d => d.category),
+                    datasets: [{
+                        data: data.data.map(d => d.amount),
+                        backgroundColor: data.data.map(d => d.color),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: $${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error loading pie chart:', error);
+        }
+    }
+
+    async function loadSpendingDonutChart() {
+        try {
+            const response = await fetch(`/api/reports/spending-by-category?${getDateParams()}`);
+            const data = await response.json();
+            
+            if (charts.donut) charts.donut.destroy();
+            
+            const ctx = document.getElementById('spending-donut-chart').getContext('2d');
+            charts.donut = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.data.map(d => d.category),
+                    datasets: [{
+                        data: data.data.map(d => d.amount),
+                        backgroundColor: data.data.map(d => d.color),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '60%',
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.raw / total) * 100).toFixed(1);
+                                    return `${context.label}: $${context.raw.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error loading donut chart:', error);
+        }
+    }
+
+    async function loadSpendingLineChart() {
+        try {
+            const groupBy = document.getElementById('line-group-by').value;
+            const response = await fetch(`/api/reports/spending-over-time?${getDateParams()}&group_by=${groupBy}`);
+            const data = await response.json();
+            
+            if (charts.line) charts.line.destroy();
+            
+            const ctx = document.getElementById('spending-line-chart').getContext('2d');
+            charts.line = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: data.datasets.income,
+                            borderColor: 'rgb(40, 167, 69)',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Expenses',
+                            data: data.datasets.expense,
+                            borderColor: 'rgb(220, 53, 69)',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Net',
+                            data: data.datasets.net,
+                            borderColor: 'rgb(23, 162, 184)',
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { intersect: false, mode: 'index' },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: value => '$' + value.toLocaleString()
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error loading line chart:', error);
+        }
+    }
+
+    async function loadIncomeExpenseBarChart() {
+        try {
+            const groupBy = document.getElementById('bar-group-by').value;
+            const response = await fetch(`/api/reports/income-vs-expense?${getDateParams()}&group_by=${groupBy}`);
+            const data = await response.json();
+            
+            if (charts.bar) charts.bar.destroy();
+            
+            const ctx = document.getElementById('income-expense-bar-chart').getContext('2d');
+            charts.bar = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.data.map(d => d.label),
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: data.data.map(d => d.income),
+                            backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                            borderColor: 'rgb(40, 167, 69)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Expenses',
+                            data: data.data.map(d => d.expense),
+                            backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                            borderColor: 'rgb(220, 53, 69)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: value => '$' + value.toLocaleString()
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error loading bar chart:', error);
+        }
+    }
+
+    async function loadCategoryStackedChart() {
+        try {
+            const groupBy = document.getElementById('area-group-by').value;
+            const response = await fetch(`/api/reports/category-trend?${getDateParams()}&group_by=${groupBy}`);
+            const data = await response.json();
+            
+            if (charts.stacked) charts.stacked.destroy();
+            
+            const ctx = document.getElementById('category-stacked-chart').getContext('2d');
+            charts.stacked = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: data.datasets.map(ds => ({
+                        label: ds.label,
+                        data: ds.data,
+                        backgroundColor: ds.color + '80',
+                        borderColor: ds.color,
+                        fill: true,
+                        tension: 0.4
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    interaction: { intersect: false, mode: 'index' },
+                    scales: {
+                        y: {
+                            stacked: true,
+                            ticks: {
+                                callback: value => '$' + value.toLocaleString()
+                            }
+                        },
+                        x: {
+                            stacked: true
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error loading stacked chart:', error);
+        }
+    }
+
+    async function loadHistogramChart() {
+        try {
+            const type = document.getElementById('histogram-type').value;
+            const response = await fetch(`/api/reports/spending-histogram?${getDateParams()}&type=${type}&bins=10`);
+            const data = await response.json();
+            
+            if (charts.histogram) charts.histogram.destroy();
+            
+            const ctx = document.getElementById('histogram-chart').getContext('2d');
+            charts.histogram = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: `Number of ${type === 'expense' ? 'Expenses' : 'Income'} Transactions`,
+                        data: data.data,
+                        backgroundColor: type === 'expense' ? 'rgba(220, 53, 69, 0.7)' : 'rgba(40, 167, 69, 0.7)',
+                        borderColor: type === 'expense' ? 'rgb(220, 53, 69)' : 'rgb(40, 167, 69)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Transactions'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Amount Range'
+                            }
+                        }
+                    },
+                    plugins: {
+                        subtitle: {
+                            display: true,
+                            text: data.count > 0 ? 
+                                `Total: ${data.count} transactions | Range: $${data.min} - $${data.max} | Avg: $${data.average}` : 
+                                'No data available'
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error loading histogram:', error);
+        }
+    }
+</script>
+{% endblock %}
