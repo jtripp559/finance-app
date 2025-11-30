@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}{% if transaction_id %}Edit{% else %}New{% endif %} Transaction - Personal Finance App{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>
+            <i class="bi bi-{% if transaction_id %}pencil{% else %}plus-lg{% endif %}"></i>
+            {% if transaction_id %}Edit{% else %}New{% endif %} Transaction
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <form id="transaction-form">
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="date" name="date" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="description" name="description" required 
+                               placeholder="e.g., Coffee at Starbucks">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="amount" class="form-label">Amount <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" class="form-control" id="amount" name="amount" required
+                                   placeholder="0.00">
+                        </div>
+                        <div class="form-text">Use negative amounts for expenses, positive for income</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="merchant" class="form-label">Merchant (Optional)</label>
+                        <input type="text" class="form-control" id="merchant" name="merchant"
+                               placeholder="e.g., Starbucks">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category_id">
+                            <option value="">Auto-categorize</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"
+                                  placeholder="Additional notes..."></textarea>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Save Transaction
+                        </button>
+                        <a href="/transactions" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const transactionId = {{ transaction_id|default('null') }};
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCategories();
+        
+        if (transactionId) {
+            loadTransaction();
+        } else {
+            // Set default date to today
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        }
+        
+        document.getElementById('transaction-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveTransaction();
+        });
+    });
+
+    async function loadCategories() {
+        try {
+            const response = await fetch('/api/categories?flat=true');
+            const categories = await response.json();
+            
+            const select = document.getElementById('category');
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading categories:', error);
+        }
+    }
+
+    async function loadTransaction() {
+        try {
+            const response = await fetch(`/api/transactions/${transactionId}`);
+            if (!response.ok) {
+                alert('Transaction not found');
+                window.location.href = '/transactions';
+                return;
+            }
+            
+            const txn = await response.json();
+            
+            document.getElementById('date').value = txn.date;
+            document.getElementById('description').value = txn.description;
+            document.getElementById('amount').value = txn.amount;
+            document.getElementById('merchant').value = txn.merchant || '';
+            document.getElementById('category').value = txn.category_id || '';
+            document.getElementById('notes').value = txn.notes || '';
+        } catch (error) {
+            console.error('Error loading transaction:', error);
+            alert('Error loading transaction');
+        }
+    }
+
+    async function saveTransaction() {
+        const data = {
+            date: document.getElementById('date').value,
+            description: document.getElementById('description').value,
+            amount: parseFloat(document.getElementById('amount').value),
+            merchant: document.getElementById('merchant').value || null,
+            category_id: document.getElementById('category').value ? 
+                        parseInt(document.getElementById('category').value) : null,
+            notes: document.getElementById('notes').value || null
+        };
+        
+        try {
+            const url = transactionId ? `/api/transactions/${transactionId}` : '/api/transactions';
+            const method = transactionId ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                window.location.href = '/transactions';
+            } else {
+                const error = await response.json();
+                alert('Error: ' + (error.error || 'Failed to save transaction'));
+            }
+        } catch (error) {
+            console.error('Error saving transaction:', error);
+            alert('Error saving transaction');
+        }
+    }
+</script>
+{% endblock %}
