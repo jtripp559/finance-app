@@ -72,6 +72,12 @@
                         </select>
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label">Reference # Column</label>
+                        <select class="form-select" id="reference-column">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label">Date Format</label>
                         <select class="form-select" id="date-format">
                             <option value="">Auto-detect</option>
@@ -213,6 +219,7 @@
         const descSelect = document.getElementById('description-column');
         const merchantSelect = document.getElementById('merchant-column');
         const accountSelect = document.getElementById('account-column');
+        const referenceSelect = document.getElementById('reference-column');
         
         // Clear and populate required selects
         [dateSelect, amountSelect, descSelect].forEach(select => {
@@ -233,7 +240,7 @@
         });
         
         // Populate optional selects with "None" option
-        [merchantSelect, accountSelect].forEach(select => {
+        [merchantSelect, accountSelect, referenceSelect].forEach(select => {
             select.innerHTML = '<option value="">None</option>';
             data.headers.forEach(header => {
                 const option = document.createElement('option');
@@ -265,6 +272,9 @@
             }
             if (data.suggested_mapping.account) {
                 accountSelect.value = data.suggested_mapping.account;
+            }
+            if (data.suggested_mapping.reference) {
+                referenceSelect.value = data.suggested_mapping.reference;
             }
         }
         
@@ -306,6 +316,7 @@
         const descColumn = document.getElementById('description-column').value;
         const merchantColumn = document.getElementById('merchant-column').value;
         const accountColumn = document.getElementById('account-column').value;
+        const referenceColumn = document.getElementById('reference-column').value;
         const dateFormat = document.getElementById('date-format').value;
         
         if (!dateColumn || !amountColumn || !descColumn) {
@@ -325,6 +336,9 @@
         }
         if (accountColumn) {
             mapping.account = accountColumn;
+        }
+        if (referenceColumn) {
+            mapping.reference = referenceColumn;
         }
         if (dateFormat) {
             mapping.date_format = dateFormat;

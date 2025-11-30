@@ -76,6 +76,7 @@
                         <th>Description</th>
                         <th>Merchant</th>
                         <th>Account</th>
+                        <th>Ref #</th>
                         <th>Category</th>
                         <th class="text-end">Amount</th>
                         <th class="text-end">Actions</th>
@@ -219,7 +220,7 @@
         tbody.innerHTML = '';
         
         if (transactions.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No transactions found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No transactions found</td></tr>';
             return;
         }
         
@@ -230,6 +231,7 @@
                 <td>${escapeHtml(txn.description)}</td>
                 <td>${escapeHtml(txn.merchant || '-')}</td>
                 <td><span class="badge bg-info">${escapeHtml(txn.account_name || '-')}</span></td>
+                <td>${escapeHtml(txn.reference_number || '-')}</td>
                 <td><span class="badge bg-secondary">${escapeHtml(txn.category_name || 'Uncategorized')}</span></td>
                 <td class="text-end ${txn.amount >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(txn.amount)}</td>
                 <td class="text-end">

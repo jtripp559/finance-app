@@ -153,6 +153,7 @@ def create_transaction():
         description=data['description'],
         merchant=data.get('merchant'),
         account_name=data.get('account_name'),
+        reference_number=data.get('reference_number'),
         category_id=category_id,
         notes=data.get('notes')
     )
@@ -192,6 +193,9 @@ def update_transaction(transaction_id):
     
     if 'account_name' in data:
         transaction.account_name = data['account_name']
+    
+    if 'reference_number' in data:
+        transaction.reference_number = data['reference_number']
     
     if 'category_id' in data:
         transaction.category_id = data['category_id']
@@ -246,6 +250,7 @@ def bulk_create_transactions():
                 description=txn_data['description'],
                 merchant=txn_data.get('merchant'),
                 account_name=txn_data.get('account_name'),
+                reference_number=txn_data.get('reference_number'),
                 category_id=category_id,
                 notes=txn_data.get('notes')
             )

@@ -62,6 +62,7 @@ class Transaction(db.Model):
     description = db.Column(db.String(500), nullable=False)
     merchant = db.Column(db.String(200), nullable=True)
     account_name = db.Column(db.String(100), nullable=True)  # e.g., "AMEX", "EECU Checking", "Target Card"
+    reference_number = db.Column(db.String(100), nullable=True)  # Check number, confirmation number, etc.
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     notes = db.Column(db.Text, nullable=True)
@@ -76,6 +77,7 @@ class Transaction(db.Model):
             'description': self.description,
             'merchant': self.merchant,
             'account_name': self.account_name,
+            'reference_number': self.reference_number,
             'category_id': self.category_id,
             'category_name': self.category.name if self.category else None,
             'user_id': self.user_id,

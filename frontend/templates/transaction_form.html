@@ -48,6 +48,12 @@
                     </div>
                     
                     <div class="mb-3">
+                        <label for="reference-number" class="form-label">Reference Number</label>
+                        <input type="text" class="form-control" id="reference-number" name="reference_number"
+                               placeholder="e.g., Check #1234, Confirmation #ABC123">
+                    </div>
+                    
+                    <div class="mb-3">
                         <label for="merchant" class="form-label">Merchant (Optional)</label>
                         <input type="text" class="form-control" id="merchant" name="merchant"
                                placeholder="e.g., Starbucks">
@@ -149,6 +155,7 @@
             document.getElementById('amount').value = txn.amount;
             document.getElementById('merchant').value = txn.merchant || '';
             document.getElementById('account-name').value = txn.account_name || '';
+            document.getElementById('reference-number').value = txn.reference_number || '';
             document.getElementById('category').value = txn.category_id || '';
             document.getElementById('notes').value = txn.notes || '';
         } catch (error) {
@@ -164,6 +171,7 @@
             amount: parseFloat(document.getElementById('amount').value),
             merchant: document.getElementById('merchant').value || null,
             account_name: document.getElementById('account-name').value || null,
+            reference_number: document.getElementById('reference-number').value || null,
             category_id: document.getElementById('category').value ? 
                         parseInt(document.getElementById('category').value) : null,
             notes: document.getElementById('notes').value || null

@@ -39,6 +39,11 @@ def detect_column_type(column_name, sample_values):
     if any(kw in name_lower for kw in account_keywords):
         return 'account'
     
+    # Reference/Check number detection
+    reference_keywords = ['check', 'cheque', 'reference', 'ref', 'confirmation', 'trans_id', 'transaction_id', 'number', 'num']
+    if any(kw in name_lower for kw in reference_keywords):
+        return 'reference'
+    
     # Category detection
     cat_keywords = ['category', 'cat', 'type', 'classification']
     if any(kw in name_lower for kw in cat_keywords):
@@ -224,6 +229,10 @@ def import_csv():
                     if mapping.get('account') and mapping['account'] in headers:
                         account_name = row.get(mapping['account'], '').strip() or None
                     
+                    reference_number = None
+                    if mapping.get('reference') and mapping['reference'] in headers:
+                        reference_number = row.get(mapping['reference'], '').strip() or None
+                    
                     # Auto-categorize - prioritize merchant
                     category_id = categorize_transaction(merchant, description)
                     
@@ -233,6 +242,7 @@ def import_csv():
                         description=description,
                         merchant=merchant,
                         account_name=account_name,
+                        reference_number=reference_number,
                         category_id=category_id
                     )
                     db.session.add(transaction)
