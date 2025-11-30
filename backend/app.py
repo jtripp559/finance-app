@@ -113,4 +113,8 @@ if __name__ == '__main__':
     seed_database(app)
     
     # Run the development server
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Note: debug=True should only be used in development environments
+    # In production, use a proper WSGI server like gunicorn
+    import os
+    debug_mode = os.environ.get('FLASK_ENV', 'development') == 'development'
+    app.run(host='0.0.0.0', port=5000, debug=debug_mode)

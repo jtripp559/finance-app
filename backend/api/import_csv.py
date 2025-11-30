@@ -267,4 +267,6 @@ def import_csv():
     except UnicodeDecodeError:
         return jsonify({'error': 'Could not decode file. Please ensure it is UTF-8 encoded.'}), 400
     except Exception as e:
-        return jsonify({'error': f'Error processing file: {str(e)}'}), 500
+        # Log the full error for debugging but return generic message to client
+        current_app.logger.error(f'CSV import error: {str(e)}')
+        return jsonify({'error': 'An error occurred while processing the file. Please check the file format and try again.'}), 500

@@ -208,7 +208,7 @@
                     <a href="/transactions/${txn.id}/edit" class="btn btn-sm btn-outline-primary">
                         <i class="bi bi-pencil"></i>
                     </a>
-                    <button class="btn btn-sm btn-outline-danger" onclick="showDeleteModal(${txn.id}, '${escapeHtml(txn.description)}', ${txn.amount})">
+                    <button class="btn btn-sm btn-outline-danger" data-txn-id="${txn.id}" data-txn-desc="${escapeHtml(txn.description).replace(/'/g, '&#39;')}" data-txn-amount="${txn.amount}" onclick="showDeleteModalFromButton(this)">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
@@ -254,6 +254,13 @@
     function goToPage(page) {
         currentPage = page;
         loadTransactions();
+    }
+
+    function showDeleteModalFromButton(btn) {
+        const id = parseInt(btn.dataset.txnId);
+        const description = btn.dataset.txnDesc;
+        const amount = parseFloat(btn.dataset.txnAmount);
+        showDeleteModal(id, description, amount);
     }
 
     function showDeleteModal(id, description, amount) {
