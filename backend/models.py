@@ -68,6 +68,20 @@ class Transaction(db.Model):
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)  # Soft delete timestamp
+    
+    @property
+    def is_deleted(self):
+        """Check if transaction is soft-deleted."""
+        return self.deleted_at is not None
+    
+    def soft_delete(self):
+        """Mark transaction as deleted."""
+        self.deleted_at = datetime.utcnow()
+    
+    def restore(self):
+        """Restore a soft-deleted transaction."""
+        self.deleted_at = None
     
     def to_dict(self):
         return {
@@ -83,7 +97,9 @@ class Transaction(db.Model):
             'user_id': self.user_id,
             'notes': self.notes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
+            'is_deleted': self.is_deleted
         }
 
 

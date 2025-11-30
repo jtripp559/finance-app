@@ -12,7 +12,8 @@ def list_accounts():
     """Get list of unique account names."""
     accounts = db.session.query(Transaction.account_name).filter(
         Transaction.account_name.isnot(None),
-        Transaction.account_name != ''
+        Transaction.account_name != '',
+        Transaction.deleted_at.is_(None)  # Exclude deleted transactions
     ).distinct().order_by(Transaction.account_name).all()
     
     return jsonify([a[0] for a in accounts if a[0]]), 200
@@ -30,10 +31,21 @@ def list_transactions():
     - min_amount: Filter by minimum amount
     - max_amount: Filter by maximum amount
     - search: Search in description and merchant
+    - include_deleted: If 'true', include deleted transactions (default: false)
+    - only_deleted: If 'true', only show deleted transactions (default: false)
     - page: Page number (default: 1)
     - per_page: Items per page (default: 50)
     """
     query = Transaction.query
+    
+    # Handle deleted transactions filter
+    include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
+    only_deleted = request.args.get('only_deleted', 'false').lower() == 'true'
+    
+    if only_deleted:
+        query = query.filter(Transaction.deleted_at.isnot(None))
+    elif not include_deleted:
+        query = query.filter(Transaction.deleted_at.is_(None))
     
     # Date filters
     start_date = request.args.get('start_date')
@@ -210,12 +222,50 @@ def update_transaction(transaction_id):
 
 @transactions_bp.route('/<int:transaction_id>', methods=['DELETE'])
 def delete_transaction(transaction_id):
-    """Delete a transaction."""
+    """Soft delete a transaction (mark as deleted, not actually removed)."""
     transaction = Transaction.query.get_or_404(transaction_id)
+    
+    if transaction.is_deleted:
+        return jsonify({'error': 'Transaction is already deleted'}), 400
+    
+    transaction.soft_delete()
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Transaction deleted',
+        'transaction': transaction.to_dict()
+    }), 200
+
+
+@transactions_bp.route('/<int:transaction_id>/restore', methods=['POST'])
+def restore_transaction(transaction_id):
+    """Restore a soft-deleted transaction."""
+    transaction = Transaction.query.get_or_404(transaction_id)
+    
+    if not transaction.is_deleted:
+        return jsonify({'error': 'Transaction is not deleted'}), 400
+    
+    transaction.restore()
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Transaction restored',
+        'transaction': transaction.to_dict()
+    }), 200
+
+
+@transactions_bp.route('/<int:transaction_id>/permanent', methods=['DELETE'])
+def permanently_delete_transaction(transaction_id):
+    """Permanently delete a transaction from the database.
+    
+    This action cannot be undone. Use with caution.
+    """
+    transaction = Transaction.query.get_or_404(transaction_id)
+    
     db.session.delete(transaction)
     db.session.commit()
     
-    return jsonify({'message': 'Transaction deleted'}), 200
+    return jsonify({'message': 'Transaction permanently deleted'}), 200
 
 
 @transactions_bp.route('/bulk', methods=['POST'])
