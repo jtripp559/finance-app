@@ -29,6 +29,11 @@ def detect_column_type(column_name, sample_values):
     if any(kw in name_lower for kw in desc_keywords):
         return 'description'
     
+    # Account detection
+    account_keywords = ['account', 'acct', 'card', 'source', 'bank', 'wallet']
+    if any(kw in name_lower for kw in account_keywords):
+        return 'account'
+    
     # Category detection
     cat_keywords = ['category', 'cat', 'type', 'classification']
     if any(kw in name_lower for kw in cat_keywords):
@@ -210,6 +215,7 @@ def import_csv():
                         date=date_val,
                         amount=amount,
                         description=description,
+                        account_name=row.get(mapping.get('account', ''), '').strip() if mapping.get('account') else None,
                         category_id=category_id
                     )
                     db.session.add(transaction)

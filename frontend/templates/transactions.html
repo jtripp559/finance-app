@@ -30,6 +30,12 @@
                 <input type="date" class="form-control" id="end-date" name="end_date">
             </div>
             <div class="col-md-2">
+                <label for="account-filter" class="form-label">Account</label>
+                <select class="form-select" id="account-filter" name="account_name">
+                    <option value="">All Accounts</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label for="category-filter" class="form-label">Category</label>
                 <select class="form-select" id="category-filter" name="category_id">
                     <option value="">All Categories</option>
@@ -69,6 +75,7 @@
                         <th>Date</th>
                         <th>Description</th>
                         <th>Merchant</th>
+                        <th>Account</th>
                         <th>Category</th>
                         <th class="text-end">Amount</th>
                         <th class="text-end">Actions</th>
@@ -119,6 +126,7 @@
         deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
         
         loadCategories();
+        loadAccounts();
         loadTransactions();
         
         document.getElementById('filter-form').addEventListener('submit', function(e) {
@@ -157,6 +165,23 @@
         }
     }
 
+    async function loadAccounts() {
+        try {
+            const response = await fetch('/api/transactions/accounts');
+            const accounts = await response.json();
+            
+            const select = document.getElementById('account-filter');
+            accounts.forEach(account => {
+                const option = document.createElement('option');
+                option.value = account;
+                option.textContent = account;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading accounts:', error);
+        }
+    }
+
     async function loadTransactions() {
         const params = new URLSearchParams();
         params.append('page', currentPage);
@@ -164,6 +189,7 @@
         
         const startDate = document.getElementById('start-date').value;
         const endDate = document.getElementById('end-date').value;
+        const accountName = document.getElementById('account-filter').value;
         const categoryId = document.getElementById('category-filter').value;
         const minAmount = document.getElementById('min-amount').value;
         const maxAmount = document.getElementById('max-amount').value;
@@ -171,6 +197,7 @@
         
         if (startDate) params.append('start_date', startDate);
         if (endDate) params.append('end_date', endDate);
+        if (accountName) params.append('account_name', accountName);
         if (categoryId) params.append('category_id', categoryId);
         if (minAmount) params.append('min_amount', minAmount);
         if (maxAmount) params.append('max_amount', maxAmount);
@@ -202,6 +229,7 @@
                 <td>${formatDate(txn.date)}</td>
                 <td>${escapeHtml(txn.description)}</td>
                 <td>${escapeHtml(txn.merchant || '-')}</td>
+                <td><span class="badge bg-info">${escapeHtml(txn.account_name || '-')}</span></td>
                 <td><span class="badge bg-secondary">${escapeHtml(txn.category_name || 'Uncategorized')}</span></td>
                 <td class="text-end ${txn.amount >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(txn.amount)}</td>
                 <td class="text-end">

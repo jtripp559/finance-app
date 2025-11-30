@@ -15,6 +15,7 @@ def list_transactions():
     - start_date: Filter transactions on or after this date (YYYY-MM-DD)
     - end_date: Filter transactions on or before this date (YYYY-MM-DD)
     - category_id: Filter by category ID
+    - account_name: Filter by account name
     - min_amount: Filter by minimum amount
     - max_amount: Filter by maximum amount
     - search: Search in description
@@ -45,6 +46,11 @@ def list_transactions():
     category_id = request.args.get('category_id')
     if category_id:
         query = query.filter(Transaction.category_id == category_id)
+    
+    # Account name filter
+    account_name = request.args.get('account_name')
+    if account_name:
+        query = query.filter(Transaction.account_name == account_name)
     
     # Amount filters
     min_amount = request.args.get('min_amount')
@@ -103,6 +109,7 @@ def create_transaction():
         "amount": float,
         "description": "string",
         "merchant": "string" (optional),
+        "account_name": "string" (optional),
         "category_id": int (optional),
         "notes": "string" (optional)
     }
@@ -142,6 +149,7 @@ def create_transaction():
         amount=amount,
         description=data['description'],
         merchant=data.get('merchant'),
+        account_name=data.get('account_name'),
         category_id=category_id,
         notes=data.get('notes')
     )
@@ -162,6 +170,7 @@ def update_transaction(transaction_id):
         "amount": float,
         "description": "string",
         "merchant": "string",
+        "account_name": "string",
         "category_id": int,
         "notes": "string"
     }
@@ -189,6 +198,9 @@ def update_transaction(transaction_id):
     
     if 'merchant' in data:
         transaction.merchant = data['merchant']
+    
+    if 'account_name' in data:
+        transaction.account_name = data['account_name']
     
     if 'category_id' in data:
         transaction.category_id = data['category_id']
@@ -255,6 +267,7 @@ def bulk_create_transactions():
                 amount=amount,
                 description=txn_data['description'],
                 merchant=txn_data.get('merchant'),
+                account_name=txn_data.get('account_name'),
                 category_id=category_id,
                 notes=txn_data.get('notes')
             )
@@ -272,3 +285,13 @@ def bulk_create_transactions():
         'errors': errors,
         'error_count': len(errors)
     }), 201 if created else 400
+
+
+@transactions_bp.route('/accounts', methods=['GET'])
+def list_accounts():
+    """Get list of unique account names."""
+    accounts = db.session.query(Transaction.account_name).filter(
+        Transaction.account_name.isnot(None)
+    ).distinct().order_by(Transaction.account_name).all()
+    
+    return jsonify([a[0] for a in accounts if a[0]]), 200

@@ -44,17 +44,23 @@
                 </p>
                 
                 <div class="row g-3 mb-4">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Date Column <span class="text-danger">*</span></label>
                         <select class="form-select" id="date-column" required></select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Amount Column <span class="text-danger">*</span></label>
                         <select class="form-select" id="amount-column" required></select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Description Column <span class="text-danger">*</span></label>
                         <select class="form-select" id="description-column" required></select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Account Column</label>
+                        <select class="form-select" id="account-column">
+                            <option value="">None</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -199,8 +205,9 @@
         const dateSelect = document.getElementById('date-column');
         const amountSelect = document.getElementById('amount-column');
         const descSelect = document.getElementById('description-column');
+        const accountSelect = document.getElementById('account-column');
         
-        [dateSelect, amountSelect, descSelect].forEach(select => {
+        [dateSelect, amountSelect, descSelect, accountSelect].forEach(select => {
             select.innerHTML = '<option value="">Select column...</option>';
             data.headers.forEach(header => {
                 const option = document.createElement('option');
@@ -266,6 +273,7 @@
         const dateColumn = document.getElementById('date-column').value;
         const amountColumn = document.getElementById('amount-column').value;
         const descColumn = document.getElementById('description-column').value;
+        const accountColumn = document.getElementById('account-column').value;
         const dateFormat = document.getElementById('date-format').value;
         
         if (!dateColumn || !amountColumn || !descColumn) {
@@ -278,6 +286,10 @@
             amount: amountColumn,
             description: descColumn
         };
+        
+        if (accountColumn) {
+            mapping.account = accountColumn;
+        }
         
         if (dateFormat) {
             mapping.date_format = dateFormat;

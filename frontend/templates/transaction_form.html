@@ -39,6 +39,15 @@
                     </div>
                     
                     <div class="mb-3">
+                        <label for="account-name" class="form-label">Account</label>
+                        <input type="text" class="form-control" id="account-name" name="account_name"
+                               list="account-list" placeholder="e.g., AMEX, Checking, Savings1">
+                        <datalist id="account-list">
+                            <!-- Populated by JavaScript -->
+                        </datalist>
+                    </div>
+                    
+                    <div class="mb-3">
                         <label for="merchant" class="form-label">Merchant (Optional)</label>
                         <input type="text" class="form-control" id="merchant" name="merchant"
                                placeholder="e.g., Starbucks">
@@ -76,6 +85,7 @@
     
     document.addEventListener('DOMContentLoaded', function() {
         loadCategories();
+        loadAccounts();
         
         if (transactionId) {
             loadTransaction();
@@ -107,6 +117,22 @@
         }
     }
 
+    async function loadAccounts() {
+        try {
+            const response = await fetch('/api/transactions/accounts');
+            const accounts = await response.json();
+            
+            const datalist = document.getElementById('account-list');
+            accounts.forEach(account => {
+                const option = document.createElement('option');
+                option.value = account;
+                datalist.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading accounts:', error);
+        }
+    }
+
     async function loadTransaction() {
         try {
             const response = await fetch(`/api/transactions/${transactionId}`);
@@ -121,6 +147,7 @@
             document.getElementById('date').value = txn.date;
             document.getElementById('description').value = txn.description;
             document.getElementById('amount').value = txn.amount;
+            document.getElementById('account-name').value = txn.account_name || '';
             document.getElementById('merchant').value = txn.merchant || '';
             document.getElementById('category').value = txn.category_id || '';
             document.getElementById('notes').value = txn.notes || '';
@@ -135,6 +162,7 @@
             date: document.getElementById('date').value,
             description: document.getElementById('description').value,
             amount: parseFloat(document.getElementById('amount').value),
+            account_name: document.getElementById('account-name').value || null,
             merchant: document.getElementById('merchant').value || null,
             category_id: document.getElementById('category').value ? 
                         parseInt(document.getElementById('category').value) : null,
