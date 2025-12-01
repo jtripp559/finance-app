@@ -1,4 +1,4 @@
-"""Transaction categorization engine with rule-based and ML classifier stub."""
+"""Transaction categorization engine with rule-based and ML classifier."""
 import re
 from backend.models import db, CategorizationRule, Category
 
@@ -36,10 +36,14 @@ def categorize_transaction(merchant=None, description=None):
         if category_id:
             return category_id
     
-    # Fall back to classifier (stub)
-    category_id = classifier_predict(combined_text)
-    if category_id:
-        return category_id
+    # Fall back to ML classifier
+    try:
+        from backend.ml_categorizer import ml_categorize
+        category_id, confidence = ml_categorize(merchant, description, confidence_threshold=0.15)
+        if category_id:
+            return category_id
+    except Exception as e:
+        print(f"ML categorization error: {e}")
     
     # Return uncategorized category if exists
     uncategorized = Category.query.filter_by(name='Uncategorized').first()

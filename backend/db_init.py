@@ -25,6 +25,8 @@ def seed_categories():
         {'name': 'Transportation', 'icon': 'car-front', 'color': '#17a2b8', 'children': [
             {'name': 'Gas', 'icon': 'fuel-pump', 'color': '#17a2b8'},
             {'name': 'Car Payment', 'icon': 'car-front', 'color': '#17a2b8'},
+            {'name': 'Auto Insurance', 'icon': 'shield-check', 'color': '#17a2b8'},  # NEW
+            {'name': 'Car Maintenance', 'icon': 'tools', 'color': '#17a2b8'},  # NEW
             {'name': 'Public Transit', 'icon': 'bus-front', 'color': '#17a2b8'},
             {'name': 'Parking', 'icon': 'p-circle', 'color': '#17a2b8'},
         ]},
@@ -34,26 +36,31 @@ def seed_categories():
             {'name': 'Coffee Shops', 'icon': 'cup', 'color': '#ffc107'},
             {'name': 'Fast Food', 'icon': 'basket', 'color': '#ffc107'},
         ]},
-        {'name': 'Shopping', 'icon': 'bag', 'color': '#e83e8c', 'children': [
-            {'name': 'Clothing', 'icon': 'handbag', 'color': '#e83e8c'},
-            {'name': 'Electronics', 'icon': 'laptop', 'color': '#e83e8c'},
-            {'name': 'Home Goods', 'icon': 'lamp', 'color': '#e83e8c'},
-        ]},
-        {'name': 'Entertainment', 'icon': 'film', 'color': '#6f42c1', 'children': [
+        {'name': 'Entertainment', 'icon': 'controller', 'color': '#6f42c1', 'children': [
+            {'name': 'Streaming Services', 'icon': 'play-circle', 'color': '#6f42c1'},
             {'name': 'Movies', 'icon': 'film', 'color': '#6f42c1'},
-            {'name': 'Streaming Services', 'icon': 'tv', 'color': '#6f42c1'},
-            {'name': 'Games', 'icon': 'controller', 'color': '#6f42c1'},
             {'name': 'Hobbies', 'icon': 'palette', 'color': '#6f42c1'},
         ]},
         {'name': 'Healthcare', 'icon': 'heart-pulse', 'color': '#dc3545', 'children': [
             {'name': 'Medical', 'icon': 'hospital', 'color': '#dc3545'},
             {'name': 'Pharmacy', 'icon': 'capsule', 'color': '#dc3545'},
-            {'name': 'Insurance', 'icon': 'shield-check', 'color': '#dc3545'},
+            {'name': 'Health Insurance', 'icon': 'shield-check', 'color': '#dc3545'},  # Renamed for clarity
         ]},
         {'name': 'Personal', 'icon': 'person', 'color': '#fd7e14', 'children': [
             {'name': 'Personal Care', 'icon': 'scissors', 'color': '#fd7e14'},
             {'name': 'Education', 'icon': 'book', 'color': '#fd7e14'},
             {'name': 'Subscriptions', 'icon': 'journal', 'color': '#fd7e14'},
+        ]},
+        {'name': 'Shopping', 'icon': 'bag', 'color': '#e83e8c', 'children': [
+            {'name': 'Clothing', 'icon': 'tags', 'color': '#e83e8c'},
+            {'name': 'Electronics', 'icon': 'laptop', 'color': '#e83e8c'},
+            {'name': 'Home Goods', 'icon': 'lamp', 'color': '#e83e8c'},
+            {'name': 'Pet Care', 'icon': 'heart', 'color': '#e83e8c'},  # NEW
+        ]},
+        {'name': 'Financial', 'icon': 'bank', 'color': '#20c997', 'children': [
+            {'name': 'Transfers', 'icon': 'arrow-left-right', 'color': '#20c997'},
+            {'name': 'Bank Fees', 'icon': 'cash-stack', 'color': '#20c997'},
+            {'name': 'Taxes', 'icon': 'file-text', 'color': '#20c997'},  # NEW
         ]},
         {'name': 'Uncategorized', 'icon': 'question-circle', 'color': '#6c757d'},
     ]
@@ -175,6 +182,21 @@ def seed_database(app):
         seed_categorization_rules()
         seed_default_user()
         print("Database seeded successfully!")
+        
+        # Train ML model with predefined data
+        print("Training ML categorization model...")
+        try:
+            from backend.ml_categorizer import train_ml_model
+            result = train_ml_model()
+            if result.get('success'):
+                print(f"✓ ML model trained successfully!")
+                print(f"  - Accuracy: {result['accuracy']:.2%}")
+                print(f"  - Samples: {result['samples']}")
+                print(f"  - Categories: {result['categories']}")
+            else:
+                print(f"✗ ML model training failed: {result.get('error')}")
+        except Exception as e:
+            print(f"✗ ML model training error: {e}")
 
 
 if __name__ == '__main__':

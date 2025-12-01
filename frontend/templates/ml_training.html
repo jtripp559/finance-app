@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}ML Model Training - Personal Finance App{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1><i class="bi bi-robot"></i> ML Categorization Model</h1>
+        <p class="text-muted">Train and manage the machine learning model for automatic transaction categorization</p>
+    </div>
+</div>
+
+<!-- Model Status -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-info-circle"></i> Model Status</h5>
+            </div>
+            <div class="card-body">
+                <div id="model-status">
+                    <p class="text-center text-muted">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-gear"></i> Actions</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-primary w-100 mb-2" id="train-btn">
+                    <i class="bi bi-arrow-repeat"></i> Train Model
+                </button>
+                <button class="btn btn-outline-secondary w-100" id="test-btn" data-bs-toggle="modal" data-bs-target="#testModal">
+                    <i class="bi bi-lightning"></i> Test Prediction
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Training Results -->
+<div class="row d-none" id="results-section">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-graph-up"></i> Training Results</h5>
+            </div>
+            <div class="card-body" id="training-results">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Prediction Modal -->
+<div class="modal fade" id="testModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test ML Prediction</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="test-merchant" class="form-label">Merchant</label>
+                    <input type="text" class="form-control" id="test-merchant" placeholder="e.g., Starbucks">
+                </div>
+                <div class="mb-3">
+                    <label for="test-description" class="form-label">Description (optional)</label>
+                    <input type="text" class="form-control" id="test-description" placeholder="e.g., Coffee purchase">
+                </div>
+                <div class="alert alert-info d-none" id="prediction-result">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="predict-btn">Predict</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-question-circle"></i> How It Works</h5>
+            </div>
+            <div class="card-body">
+                <h6>Automatic Categorization</h6>
+                <p>The ML model is trained on a dataset of 500+ common merchants and their categories. When you add a new transaction:</p>
+                <ol>
+                    <li><strong>Rule-Based First:</strong> The system checks custom categorization rules you've created</li>
+                    <li><strong>ML Prediction:</strong> If no rule matches, the ML model predicts the category based on merchant/description</li>
+                    <li><strong>Confidence Threshold:</strong> Only predictions with >30% confidence are applied automatically</li>
+                </ol>
+                
+                <h6 class="mt-4">Training the Model</h6>
+                <p>The model is pre-trained with common merchants, but you can retrain it to include:</p>
+                <ul>
+                    <li>Your existing categorized transactions</li>
+                    <li>Updated merchant patterns</li>
+                    <li>New categories you've created</li>
+                </ul>
+                
+                <h6 class="mt-4">Included Merchant Categories</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <ul class="small">
+                            <li>Groceries (Walmart, Target, Kroger, etc.)</li>
+                            <li>Restaurants (Olive Garden, Chipotle, etc.)</li>
+                            <li>Coffee Shops (Starbucks, Dunkin, etc.)</li>
+                            <li>Fast Food (McDonald's, Wendy's, etc.)</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <ul class="small">
+                            <li>Gas Stations (Shell, Chevron, BP, etc.)</li>
+                            <li>Streaming (Netflix, Spotify, Hulu, etc.)</li>
+                            <li>Shopping (Amazon, Best Buy, Target, etc.)</li>
+                            <li>Utilities (Electric, Water, Internet, etc.)</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <ul class="small">
+                            <li>Healthcare (CVS, Walgreens, Hospitals, etc.)</li>
+                            <li>Transportation (Uber, Lyft, Airlines, etc.)</li>
+                            <li>Insurance (State Farm, Geico, etc.)</li>
+                            <li>And many more...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let testModal = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        testModal = new bootstrap.Modal(document.getElementById('testModal'));
+        
+        loadModelStatus();
+        
+        document.getElementById('train-btn').addEventListener('click', trainModel);
+        document.getElementById('predict-btn').addEventListener('click', testPrediction);
+    });
+
+    async function loadModelStatus() {
+        try {
+            const response = await fetch('/api/ml/status');
+            const data = await response.json();
+            
+            const statusDiv = document.getElementById('model-status');
+            
+            if (data.is_trained) {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h5><i class="bi bi-check-circle"></i> Model is Trained</h5>
+                        <p class="mb-0">
+                            <strong>Categories:</strong> ${data.num_categories}<br>
+                            The ML model is ready to categorize transactions automatically.
+                        </p>
+                    </div>
+                `;
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <h5><i class="bi bi-exclamation-triangle"></i> Model Not Trained</h5>
+                        <p class="mb-0">Train the model to enable automatic ML-based categorization.</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading model status:', error);
+        }
+    }
+
+    async function trainModel() {
+        const btn = document.getElementById('train-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Training...';
+        
+        try {
+            const response = await fetch('/api/ml/train', { method: 'POST' });
+            const result = await response.json();
+            
+            if (result.success) {
+                // Show success
+                const resultsSection = document.getElementById('results-section');
+                const resultsDiv = document.getElementById('training-results');
+                
+                resultsSection.classList.remove('d-none');
+                
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h5><i class="bi bi-check-circle"></i> Training Complete!</h5>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">Accuracy</h6>
+                                    <h3>${(result.accuracy * 100).toFixed(1)}%</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">Training Samples</h6>
+                                    <h3>${result.samples}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted">Categories</h6>
+                                    <h3>${result.categories}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                loadModelStatus();
+            } else {
+                alert('Training failed: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Training error:', error);
+            alert('Error training model: ' + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Train Model';
+        }
+    }
+
+    async function testPrediction() {
+        const merchant = document.getElementById('test-merchant').value;
+        const description = document.getElementById('test-description').value;
+        
+        if (!merchant && !description) {
+            alert('Please enter a merchant or description');
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/ml/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ merchant, description })
+            });
+            
+            const result = await response.json();
+            const resultDiv = document.getElementById('prediction-result');
+            
+            if (result.category_id) {
+                resultDiv.innerHTML = `
+                    <h6>Predicted Category</h6>
+                    <p class="mb-2"><strong>${escapeHtml(result.category_name)}</strong></p>
+                    <p class="mb-0">
+                        <small>Confidence: ${(result.confidence * 100).toFixed(1)}%</small>
+                    </p>
+                `;
+                resultDiv.classList.remove('d-none');
+                resultDiv.classList.remove('alert-warning');
+                resultDiv.classList.add('alert-success');
+            } else {
+                resultDiv.innerHTML = `
+                    <p class="mb-0">No prediction (confidence too low or model not trained)</p>
+                `;
+                resultDiv.classList.remove('d-none');
+                resultDiv.classList.remove('alert-success');
+                resultDiv.classList.add('alert-warning');
+            }
+        } catch (error) {
+            console.error('Prediction error:', error);
+            alert('Error: ' + error.message);
+        }
+    }
+</script>
+{% endblock %}

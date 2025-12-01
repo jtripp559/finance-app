@@ -41,6 +41,7 @@ def create_app(config_name=None):
     from backend.api.budgets import budgets_bp
     from backend.api.reports import reports_bp
     from backend.api.import_csv import import_csv_bp
+    from backend.api.ml_training import ml_bp  # NEW
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(transactions_bp, url_prefix='/api/transactions')
@@ -48,6 +49,7 @@ def create_app(config_name=None):
     app.register_blueprint(budgets_bp, url_prefix='/api/budgets')
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
     app.register_blueprint(import_csv_bp, url_prefix='/api/import-csv')
+    app.register_blueprint(ml_bp, url_prefix='/api/ml')  # NEW
     
     # Create database tables
     with app.app_context():
@@ -93,6 +95,11 @@ def create_app(config_name=None):
     def import_page():
         """Render the CSV import page."""
         return render_template('import.html')
+    
+    @app.route('/ml-training')
+    def ml_training():
+        """Render the ML training page."""
+        return render_template('ml_training.html')
     
     # Health check endpoint
     @app.route('/health')
