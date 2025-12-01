@@ -64,6 +64,7 @@ def list_budgets():
             spending_query = db.session.query(func.sum(Transaction.amount)).filter(
                 Transaction.date >= start,
                 Transaction.date <= end,
+                Transaction.deleted_at.is_(None),  # Exclude deleted transactions
                 Transaction.amount < 0  # Only expenses (negative amounts)
             )
             

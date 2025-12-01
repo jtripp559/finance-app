@@ -7,6 +7,18 @@ from backend.categorizer import categorize_transaction
 transactions_bp = Blueprint('transactions', __name__)
 
 
+@transactions_bp.route('/accounts', methods=['GET'])
+def list_accounts():
+    """Get list of unique account names."""
+    accounts = db.session.query(Transaction.account_name).filter(
+        Transaction.account_name.isnot(None),
+        Transaction.account_name != '',
+        Transaction.deleted_at.is_(None)  # Exclude deleted transactions
+    ).distinct().order_by(Transaction.account_name).all()
+    
+    return jsonify([a[0] for a in accounts if a[0]]), 200
+
+
 @transactions_bp.route('', methods=['GET'])
 def list_transactions():
     """List all transactions with optional filtering.
@@ -15,13 +27,25 @@ def list_transactions():
     - start_date: Filter transactions on or after this date (YYYY-MM-DD)
     - end_date: Filter transactions on or before this date (YYYY-MM-DD)
     - category_id: Filter by category ID
+    - account_name: Filter by account name
     - min_amount: Filter by minimum amount
     - max_amount: Filter by maximum amount
-    - search: Search in description
+    - search: Search in description and merchant
+    - include_deleted: If 'true', include deleted transactions (default: false)
+    - only_deleted: If 'true', only show deleted transactions (default: false)
     - page: Page number (default: 1)
     - per_page: Items per page (default: 50)
     """
     query = Transaction.query
+    
+    # Handle deleted transactions filter
+    include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
+    only_deleted = request.args.get('only_deleted', 'false').lower() == 'true'
+    
+    if only_deleted:
+        query = query.filter(Transaction.deleted_at.isnot(None))
+    elif not include_deleted:
+        query = query.filter(Transaction.deleted_at.is_(None))
     
     # Date filters
     start_date = request.args.get('start_date')
@@ -46,6 +70,11 @@ def list_transactions():
     if category_id:
         query = query.filter(Transaction.category_id == category_id)
     
+    # Account name filter
+    account_name = request.args.get('account_name')
+    if account_name:
+        query = query.filter(Transaction.account_name == account_name)
+    
     # Amount filters
     min_amount = request.args.get('min_amount')
     max_amount = request.args.get('max_amount')
@@ -62,10 +91,14 @@ def list_transactions():
         except ValueError:
             return jsonify({'error': 'Invalid max_amount'}), 400
     
-    # Search filter
+    # Search filter - search in both description and merchant
     search = request.args.get('search')
     if search:
-        query = query.filter(Transaction.description.ilike(f'%{search}%'))
+        search_filter = f'%{search}%'
+        query = query.filter(
+            (Transaction.description.ilike(search_filter)) |
+            (Transaction.merchant.ilike(search_filter))
+        )
     
     # Pagination
     page = request.args.get('page', 1, type=int)
@@ -95,18 +128,7 @@ def get_transaction(transaction_id):
 
 @transactions_bp.route('', methods=['POST'])
 def create_transaction():
-    """Create a new transaction.
-    
-    Request body:
-    {
-        "date": "YYYY-MM-DD",
-        "amount": float,
-        "description": "string",
-        "merchant": "string" (optional),
-        "category_id": int (optional),
-        "notes": "string" (optional)
-    }
-    """
+    """Create a new transaction."""
     data = request.get_json()
     
     if not data:
@@ -132,16 +154,18 @@ def create_transaction():
     except (ValueError, TypeError):
         return jsonify({'error': 'Invalid amount'}), 400
     
-    # Auto-categorize if no category provided
+    # Auto-categorize if no category provided - prioritize merchant
     category_id = data.get('category_id')
     if not category_id:
-        category_id = categorize_transaction(data['description'], data.get('merchant'))
+        category_id = categorize_transaction(data.get('merchant'), data['description'])
     
     transaction = Transaction(
         date=date,
         amount=amount,
         description=data['description'],
         merchant=data.get('merchant'),
+        account_name=data.get('account_name'),
+        reference_number=data.get('reference_number'),
         category_id=category_id,
         notes=data.get('notes')
     )
@@ -154,18 +178,7 @@ def create_transaction():
 
 @transactions_bp.route('/<int:transaction_id>', methods=['PUT'])
 def update_transaction(transaction_id):
-    """Update an existing transaction.
-    
-    Request body (all fields optional):
-    {
-        "date": "YYYY-MM-DD",
-        "amount": float,
-        "description": "string",
-        "merchant": "string",
-        "category_id": int,
-        "notes": "string"
-    }
-    """
+    """Update an existing transaction."""
     transaction = Transaction.query.get_or_404(transaction_id)
     data = request.get_json()
     
@@ -190,6 +203,12 @@ def update_transaction(transaction_id):
     if 'merchant' in data:
         transaction.merchant = data['merchant']
     
+    if 'account_name' in data:
+        transaction.account_name = data['account_name']
+    
+    if 'reference_number' in data:
+        transaction.reference_number = data['reference_number']
+    
     if 'category_id' in data:
         transaction.category_id = data['category_id']
     
@@ -203,30 +222,55 @@ def update_transaction(transaction_id):
 
 @transactions_bp.route('/<int:transaction_id>', methods=['DELETE'])
 def delete_transaction(transaction_id):
-    """Delete a transaction."""
+    """Soft delete a transaction (mark as deleted, not actually removed)."""
     transaction = Transaction.query.get_or_404(transaction_id)
+    
+    if transaction.is_deleted:
+        return jsonify({'error': 'Transaction is already deleted'}), 400
+    
+    transaction.soft_delete()
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Transaction deleted',
+        'transaction': transaction.to_dict()
+    }), 200
+
+
+@transactions_bp.route('/<int:transaction_id>/restore', methods=['POST'])
+def restore_transaction(transaction_id):
+    """Restore a soft-deleted transaction."""
+    transaction = Transaction.query.get_or_404(transaction_id)
+    
+    if not transaction.is_deleted:
+        return jsonify({'error': 'Transaction is not deleted'}), 400
+    
+    transaction.restore()
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Transaction restored',
+        'transaction': transaction.to_dict()
+    }), 200
+
+
+@transactions_bp.route('/<int:transaction_id>/permanent', methods=['DELETE'])
+def permanently_delete_transaction(transaction_id):
+    """Permanently delete a transaction from the database.
+    
+    This action cannot be undone. Use with caution.
+    """
+    transaction = Transaction.query.get_or_404(transaction_id)
+    
     db.session.delete(transaction)
     db.session.commit()
     
-    return jsonify({'message': 'Transaction deleted'}), 200
+    return jsonify({'message': 'Transaction permanently deleted'}), 200
 
 
 @transactions_bp.route('/bulk', methods=['POST'])
 def bulk_create_transactions():
-    """Create multiple transactions at once.
-    
-    Request body:
-    {
-        "transactions": [
-            {
-                "date": "YYYY-MM-DD",
-                "amount": float,
-                "description": "string",
-                ...
-            }
-        ]
-    }
-    """
+    """Create multiple transactions at once."""
     data = request.get_json()
     
     if not data or 'transactions' not in data:
@@ -245,16 +289,18 @@ def bulk_create_transactions():
             date = datetime.strptime(txn_data['date'], '%Y-%m-%d').date()
             amount = float(txn_data['amount'])
             
-            # Auto-categorize if no category provided
+            # Auto-categorize if no category provided - prioritize merchant
             category_id = txn_data.get('category_id')
             if not category_id:
-                category_id = categorize_transaction(txn_data['description'], txn_data.get('merchant'))
+                category_id = categorize_transaction(txn_data.get('merchant'), txn_data.get('description'))
             
             transaction = Transaction(
                 date=date,
                 amount=amount,
                 description=txn_data['description'],
                 merchant=txn_data.get('merchant'),
+                account_name=txn_data.get('account_name'),
+                reference_number=txn_data.get('reference_number'),
                 category_id=category_id,
                 notes=txn_data.get('notes')
             )

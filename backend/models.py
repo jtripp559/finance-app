@@ -61,11 +61,27 @@ class Transaction(db.Model):
     amount = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(500), nullable=False)
     merchant = db.Column(db.String(200), nullable=True)
+    account_name = db.Column(db.String(100), nullable=True)  # e.g., "AMEX", "EECU Checking", "Target Card"
+    reference_number = db.Column(db.String(100), nullable=True)  # Check number, confirmation number, etc.
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)  # Soft delete timestamp
+    
+    @property
+    def is_deleted(self):
+        """Check if transaction is soft-deleted."""
+        return self.deleted_at is not None
+    
+    def soft_delete(self):
+        """Mark transaction as deleted."""
+        self.deleted_at = datetime.utcnow()
+    
+    def restore(self):
+        """Restore a soft-deleted transaction."""
+        self.deleted_at = None
     
     def to_dict(self):
         return {
@@ -74,12 +90,16 @@ class Transaction(db.Model):
             'amount': self.amount,
             'description': self.description,
             'merchant': self.merchant,
+            'account_name': self.account_name,
+            'reference_number': self.reference_number,
             'category_id': self.category_id,
             'category_name': self.category.name if self.category else None,
             'user_id': self.user_id,
             'notes': self.notes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
+            'is_deleted': self.is_deleted
         }
 
 

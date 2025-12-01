@@ -39,6 +39,21 @@
                     </div>
                     
                     <div class="mb-3">
+                        <label for="account-name" class="form-label">Account</label>
+                        <input type="text" class="form-control" id="account-name" name="account_name"
+                               list="account-list" placeholder="e.g., AMEX, EECU Checking, Target Card">
+                        <datalist id="account-list">
+                            <!-- Populated by JavaScript -->
+                        </datalist>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="reference-number" class="form-label">Reference Number</label>
+                        <input type="text" class="form-control" id="reference-number" name="reference_number"
+                               placeholder="e.g., Check #1234, Confirmation #ABC123">
+                    </div>
+                    
+                    <div class="mb-3">
                         <label for="merchant" class="form-label">Merchant (Optional)</label>
                         <input type="text" class="form-control" id="merchant" name="merchant"
                                placeholder="e.g., Starbucks">
@@ -76,6 +91,7 @@
     
     document.addEventListener('DOMContentLoaded', function() {
         loadCategories();
+        loadAccounts();
         
         if (transactionId) {
             loadTransaction();
@@ -107,6 +123,22 @@
         }
     }
 
+    async function loadAccounts() {
+        try {
+            const response = await fetch('/api/transactions/accounts');
+            const accounts = await response.json();
+            
+            const datalist = document.getElementById('account-list');
+            accounts.forEach(account => {
+                const option = document.createElement('option');
+                option.value = account;
+                datalist.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading accounts:', error);
+        }
+    }
+
     async function loadTransaction() {
         try {
             const response = await fetch(`/api/transactions/${transactionId}`);
@@ -122,6 +154,8 @@
             document.getElementById('description').value = txn.description;
             document.getElementById('amount').value = txn.amount;
             document.getElementById('merchant').value = txn.merchant || '';
+            document.getElementById('account-name').value = txn.account_name || '';
+            document.getElementById('reference-number').value = txn.reference_number || '';
             document.getElementById('category').value = txn.category_id || '';
             document.getElementById('notes').value = txn.notes || '';
         } catch (error) {
@@ -136,6 +170,8 @@
             description: document.getElementById('description').value,
             amount: parseFloat(document.getElementById('amount').value),
             merchant: document.getElementById('merchant').value || null,
+            account_name: document.getElementById('account-name').value || null,
+            reference_number: document.getElementById('reference-number').value || null,
             category_id: document.getElementById('category').value ? 
                         parseInt(document.getElementById('category').value) : null,
             notes: document.getElementById('notes').value || null

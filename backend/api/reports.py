@@ -34,20 +34,14 @@ def parse_date_range(request):
 
 @reports_bp.route('/spending-by-category', methods=['GET'])
 def spending_by_category():
-    """Get spending breakdown by category for pie/donut charts.
-    
-    Query parameters:
-    - start: Start date (YYYY-MM-DD)
-    - end: End date (YYYY-MM-DD)
-    - type: 'expense' or 'income' (default: expense)
-    """
+    """Get spending breakdown by category for pie/donut charts."""
     start_date, end_date, error = parse_date_range(request)
     if error:
         return jsonify({'error': error}), 400
     
     transaction_type = request.args.get('type', 'expense')
     
-    # Query for spending by category
+    # Query for spending by category - exclude deleted transactions
     if transaction_type == 'income':
         amount_filter = Transaction.amount > 0
     else:
@@ -63,18 +57,20 @@ def spending_by_category():
     ).filter(
         Transaction.date >= start_date,
         Transaction.date <= end_date,
+        Transaction.deleted_at.is_(None),  # Exclude deleted
         amount_filter
     ).group_by(
         Category.id
     ).all()
     
-    # Also get uncategorized transactions
+    # Also get uncategorized transactions (exclude deleted)
     uncategorized = db.session.query(
         func.sum(Transaction.amount).label('total')
     ).filter(
         Transaction.date >= start_date,
         Transaction.date <= end_date,
         Transaction.category_id.is_(None),
+        Transaction.deleted_at.is_(None),  # Exclude deleted
         amount_filter
     ).scalar() or 0
     

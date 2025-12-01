@@ -3,26 +3,41 @@ import re
 from backend.models import db, CategorizationRule, Category
 
 
-def categorize_transaction(description, merchant=None):
-    """Categorize a transaction based on description and merchant.
+def categorize_transaction(merchant=None, description=None):
+    """Categorize a transaction based on merchant and description.
     
     Args:
-        description: Transaction description string
-        merchant: Optional merchant name
+        merchant: Merchant name (primary for matching)
+        description: Transaction description (secondary)
     
     Returns:
         category_id or None if no match found
     """
-    # Combine description and merchant for matching
-    text = f"{description} {merchant or ''}".lower()
+    # Prioritize merchant for matching, fall back to description
+    primary_text = (merchant or '').lower().strip()
+    secondary_text = (description or '').lower().strip()
     
-    # First, try rule-based categorization
-    category_id = rule_based_categorize(text)
-    if category_id:
-        return category_id
+    # First, try rule-based categorization on merchant
+    if primary_text:
+        category_id = rule_based_categorize(primary_text)
+        if category_id:
+            return category_id
+    
+    # Then try on description
+    if secondary_text:
+        category_id = rule_based_categorize(secondary_text)
+        if category_id:
+            return category_id
+    
+    # Try combined text
+    combined_text = f"{primary_text} {secondary_text}".strip()
+    if combined_text:
+        category_id = rule_based_categorize(combined_text)
+        if category_id:
+            return category_id
     
     # Fall back to classifier (stub)
-    category_id = classifier_predict(text)
+    category_id = classifier_predict(combined_text)
     if category_id:
         return category_id
     
@@ -221,7 +236,7 @@ def recategorize_transactions(category_id=None):
     
     updated = 0
     for txn in transactions:
-        new_category_id = categorize_transaction(txn.description, txn.merchant)
+        new_category_id = categorize_transaction(txn.merchant, txn.description)
         if new_category_id and new_category_id != txn.category_id:
             txn.category_id = new_category_id
             updated += 1
